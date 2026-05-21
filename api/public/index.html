@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Laklak Operations</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <section id="loginScreen" class="login-screen">
+      <form id="loginForm" class="login-panel">
+        <div class="brand login-brand">
+          <div class="brand-mark" aria-hidden="true">L</div>
+          <div>
+            <strong>Laklak</strong>
+            <span>Operations</span>
+          </div>
+        </div>
+
+        <div>
+          <h1>Sign In</h1>
+          <p class="login-copy">Use your local admin account.</p>
+        </div>
+
+        <label class="field">
+          <span>Email</span>
+          <input id="emailInput" name="email" type="email" value="admin@laklak.local" autocomplete="email" required />
+        </label>
+
+        <button class="button" type="submit">Continue</button>
+        <p id="loginMessage" class="form-message" role="status"></p>
+      </form>
+    </section>
+
+    <div id="appShell" class="app-shell is-hidden">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">L</div>
+          <div>
+            <strong>Laklak</strong>
+            <span>Operations</span>
+          </div>
+        </div>
+
+        <nav class="nav-list" aria-label="Main navigation">
+          <button class="nav-item active" type="button" data-view="admin">Admin Dashboard</button>
+          <button class="nav-item" type="button" data-view="user">User View</button>
+          <button class="nav-item disabled" type="button" aria-disabled="true">Check-in</button>
+          <button class="nav-item disabled" type="button" aria-disabled="true">Settings</button>
+        </nav>
+      </aside>
+
+      <main class="workspace">
+        <header class="topbar">
+          <div>
+            <h1 id="pageTitle">Admin Dashboard</h1>
+            <p id="pageSubtitle">Live local operations data from XAMPP and the Node API.</p>
+          </div>
+          <div class="topbar-actions">
+            <div id="userBadge" class="user-badge">Not signed in</div>
+            <button id="refreshButton" class="button" type="button">Refresh</button>
+            <button id="logoutButton" class="button button-secondary" type="button">Logout</button>
+          </div>
+        </header>
+
+        <section id="adminView" class="view-panel">
+          <section class="status-grid" aria-label="System status">
+            <div class="status-tile">
+              <span class="label">API</span>
+              <strong id="apiStatus">Checking</strong>
+            </div>
+            <div class="status-tile">
+              <span class="label">Database</span>
+              <strong id="dbStatus">Checking</strong>
+            </div>
+            <div class="status-tile">
+              <span class="label">Clubs</span>
+              <strong id="clubCount">0</strong>
+            </div>
+            <div class="status-tile">
+              <span class="label">Tables</span>
+              <strong id="tableCount">0</strong>
+            </div>
+          </section>
+
+          <section class="status-grid" aria-label="Reservation analytics">
+            <div class="status-tile">
+              <span class="label">Reservations</span>
+              <strong id="reservationCount">0</strong>
+            </div>
+            <div class="status-tile">
+              <span class="label">Pending</span>
+              <strong id="pendingCount">0</strong>
+            </div>
+            <div class="status-tile">
+              <span class="label">Confirmed</span>
+              <strong id="confirmedCount">0</strong>
+            </div>
+            <div class="status-tile">
+              <span class="label">Attended</span>
+              <strong id="attendedCount">0</strong>
+            </div>
+          </section>
+
+          <section class="content-grid">
+            <section class="panel" aria-labelledby="clubsHeading">
+              <div class="panel-header">
+                <div>
+                  <h2 id="clubsHeading">Club Inventory</h2>
+                  <p>Select a club to inspect tables.</p>
+                </div>
+                <span id="loadedAt" class="timestamp">Not loaded</span>
+              </div>
+
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Location</th>
+                      <th>Created</th>
+                    </tr>
+                  </thead>
+                  <tbody id="clubsBody">
+                    <tr>
+                      <td colspan="3">Loading clubs...</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <section class="panel" aria-labelledby="tablesHeading">
+              <div class="panel-header">
+                <div>
+                  <h2 id="tablesHeading">Tables</h2>
+                  <p id="selectedClubLabel">No club selected.</p>
+                </div>
+              </div>
+
+              <div id="tablesList" class="tables-list">
+                <div class="empty-state">Select a club from the list.</div>
+              </div>
+            </section>
+          </section>
+
+          <section class="panel users-panel" aria-labelledby="usersHeading">
+            <div class="panel-header">
+              <div>
+                <h2 id="usersHeading">User Roles</h2>
+                <p>Local access levels for Phase 1 testing.</p>
+              </div>
+            </div>
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Role</th>
+                    <th>Club</th>
+                    <th>Created</th>
+                  </tr>
+                </thead>
+                <tbody id="usersBody">
+                  <tr>
+                    <td colspan="4">Loading users...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="panel reservations-panel" aria-labelledby="reservationsHeading">
+            <div class="panel-header">
+              <div>
+                <h2 id="reservationsHeading">Latest Reservations</h2>
+                <p>Booking rows will appear here once reservation flow is added.</p>
+              </div>
+            </div>
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Customer</th>
+                    <th>Club</th>
+                    <th>Table</th>
+                    <th>Date</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="reservationsBody">
+                  <tr>
+                    <td colspan="5">No reservations yet.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section id="userView" class="view-panel is-hidden">
+          <section class="user-grid">
+            <section class="panel" aria-labelledby="userClubsHeading">
+              <div class="panel-header">
+                <div>
+                  <h2 id="userClubsHeading">Browse Clubs</h2>
+                  <p>Customer preview for choosing a venue.</p>
+                </div>
+              </div>
+
+              <div id="userClubList" class="user-card-list">
+                <div class="empty-state">Loading clubs...</div>
+              </div>
+            </section>
+
+            <section class="panel" aria-labelledby="userTablesHeading">
+              <div class="panel-header">
+                <div>
+                  <h2 id="userTablesHeading">Available Tables</h2>
+                  <p id="userSelectedClubLabel">Select a club to view tables.</p>
+                </div>
+              </div>
+
+              <div id="userTablesList" class="booking-list">
+                <div class="empty-state">Select a club first.</div>
+              </div>
+            </section>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>
