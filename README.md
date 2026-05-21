@@ -57,8 +57,11 @@ Useful test routes:
 - `GET /` - operations dashboard UI
 - `GET /api` - API route index
 - `POST /auth/dev-login` - local staff/admin login for Phase 1
+- `POST /reservations` - create a pending reservation
 - `GET /admin/analytics` - admin dashboard metrics
 - `GET /admin/reservations` - latest reservations table
+- `PATCH /admin/reservations/:id/confirm` - confirm pending reservation and generate QR hash
+- `PATCH /admin/reservations/:id/cancel` - cancel pending or confirmed reservation
 - `GET /admin/users` - local users and roles
 - `GET /health`
 - `GET /db/health`
@@ -84,4 +87,13 @@ developer@laklak.local
 staffadmin@laklak.local
 clubadmin@laklak.local
 user@laklak.local
+```
+
+Current MVP loop:
+
+```txt
+User View reserve table -> pending reservation
+Admin Dashboard confirm -> confirmed reservation with QR hash
+Admin Dashboard cancel -> cancelled reservation
+Duplicate active booking for the same table/date -> 409 Conflict
 ```

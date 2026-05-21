@@ -112,6 +112,10 @@ button {
   font-size: 14px;
 }
 
+.success-message {
+  color: var(--ok-text);
+}
+
 .sidebar {
   display: flex;
   flex-direction: column;
@@ -220,8 +224,17 @@ h2 {
   cursor: pointer;
 }
 
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
 .button:hover {
   background: var(--accent-strong);
+}
+
+.button:disabled:hover {
+  background: var(--accent);
 }
 
 .button-secondary {
@@ -232,6 +245,16 @@ h2 {
 
 .button-secondary:hover {
   background: var(--surface-muted);
+}
+
+.button-secondary:disabled:hover {
+  background: var(--surface);
+}
+
+.button-compact {
+  min-height: 32px;
+  padding: 6px 10px;
+  font-size: 13px;
 }
 
 .topbar-actions {
@@ -414,6 +437,14 @@ tbody tr.selected {
   padding: 16px;
 }
 
+.booking-form {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(160px, 1fr)) auto;
+  gap: 12px;
+  align-items: end;
+  padding: 16px;
+}
+
 .club-card {
   display: grid;
   gap: 6px;
@@ -452,6 +483,18 @@ tbody tr.selected {
   padding: 14px;
 }
 
+.action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.qr-hash {
+  color: var(--muted);
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+}
+
 .reserve-button:disabled {
   cursor: not-allowed;
   opacity: 0.62;
@@ -480,7 +523,8 @@ tbody tr.selected {
 
   .status-grid,
   .content-grid,
-  .user-grid {
+  .user-grid,
+  .booking-form {
     grid-template-columns: 1fr;
   }
 }

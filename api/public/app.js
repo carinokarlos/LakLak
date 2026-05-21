@@ -5,6 +5,7 @@ const state = {
   analytics: null,
   selectedAdminClubId: null,
   selectedUserClubId: null,
+  selectedBookingTable: null,
   currentUser: null,
   currentView: "admin",
 };
@@ -38,6 +39,12 @@ const elements = {
   userClubList: document.querySelector("#userClubList"),
   userTablesList: document.querySelector("#userTablesList"),
   userSelectedClubLabel: document.querySelector("#userSelectedClubLabel"),
+  bookingForm: document.querySelector("#bookingForm"),
+  bookingNameInput: document.querySelector("#bookingNameInput"),
+  bookingEmailInput: document.querySelector("#bookingEmailInput"),
+  bookingDateInput: document.querySelector("#bookingDateInput"),
+  selectedBookingTable: document.querySelector("#selectedBookingTable"),
+  bookingMessage: document.querySelector("#bookingMessage"),
   loadedAt: document.querySelector("#loadedAt"),
   refreshButton: document.querySelector("#refreshButton"),
 };
@@ -67,6 +74,13 @@ function formatDate(value) {
     day: "numeric",
     year: "numeric",
   }).format(new Date(value));
+}
+
+function formatDateInput(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function formatCurrency(value) {
@@ -190,7 +204,7 @@ function renderReservations() {
   if (state.reservations.length === 0) {
     elements.reservationsBody.innerHTML = `
       <tr>
-        <td colspan="5">No reservations yet.</td>
+        <td colspan="7">No reservations yet.</td>
       </tr>
     `;
     return;
@@ -208,10 +222,41 @@ function renderReservations() {
           <td>${escapeHtml(reservation.table_label)}</td>
           <td>${formatDate(reservation.booking_date)}</td>
           <td><span class="badge">${escapeHtml(reservation.status)}</span></td>
+          <td>
+            <code class="qr-hash">${escapeHtml(reservation.qr_code_hash ? reservation.qr_code_hash.slice(0, 16) : "-")}</code>
+          </td>
+          <td>
+            <div class="action-buttons">
+              <button
+                class="button button-compact"
+                type="button"
+                data-reservation-action="confirm"
+                data-reservation-id="${reservation.id}"
+                ${reservation.status !== "pending" ? "disabled" : ""}
+              >
+                Confirm
+              </button>
+              <button
+                class="button button-secondary button-compact"
+                type="button"
+                data-reservation-action="cancel"
+                data-reservation-id="${reservation.id}"
+                ${["cancelled", "attended"].includes(reservation.status) ? "disabled" : ""}
+              >
+                Cancel
+              </button>
+            </div>
+          </td>
         </tr>
       `
     )
     .join("");
+
+  for (const button of elements.reservationsBody.querySelectorAll("[data-reservation-action]")) {
+    button.addEventListener("click", () =>
+      handleReservationAction(button.dataset.reservationId, button.dataset.reservationAction)
+    );
+  }
 }
 
 function renderUsers() {
@@ -280,11 +325,32 @@ function renderUserTables(tables) {
               Seats ${table.capacity} - ${formatCurrency(table.min_consumable)}
             </div>
           </div>
-          <button class="button button-secondary reserve-button" type="button" disabled>Reserve</button>
+          <button
+            class="button button-secondary reserve-button"
+            type="button"
+            data-reserve-table-id="${table.id}"
+            ${table.is_active ? "" : "disabled"}
+          >
+            Reserve
+          </button>
         </article>
       `
     )
     .join("");
+
+  for (const button of elements.userTablesList.querySelectorAll("[data-reserve-table-id]")) {
+    const table = tables.find((item) => item.id === button.dataset.reserveTableId);
+    button.addEventListener("click", () => selectBookingTable(table));
+  }
+}
+
+function selectBookingTable(table) {
+  state.selectedBookingTable = table;
+  elements.selectedBookingTable.textContent = table
+    ? `${table.label} - ${formatCurrency(table.min_consumable)} min consumable`
+    : "No table selected.";
+  elements.bookingMessage.textContent = "";
+  elements.bookingForm.scrollIntoView({ behavior: "smooth", block: "center" });
 }
 
 async function selectAdminClub(clubId) {
@@ -359,6 +425,52 @@ async function handleLogin(event) {
   } finally {
     submitButton.disabled = false;
     submitButton.textContent = "Continue";
+  }
+}
+
+async function handleReservationAction(reservationId, action) {
+  const endpoint = `/admin/reservations/${reservationId}/${action}`;
+
+  try {
+    await fetchJson(endpoint, { method: "PATCH" });
+    await loadDashboard();
+  } catch (error) {
+    window.alert(error.message);
+  }
+}
+
+async function handleBookingSubmit(event) {
+  event.preventDefault();
+  elements.bookingMessage.classList.remove("success-message");
+
+  if (!state.selectedBookingTable) {
+    elements.bookingMessage.textContent = "Select a table first.";
+    return;
+  }
+
+  const submitButton = elements.bookingForm.querySelector("button[type='submit']");
+  submitButton.disabled = true;
+  submitButton.textContent = "Creating";
+
+  try {
+    const reservation = await fetchJson("/reservations", {
+      method: "POST",
+      body: JSON.stringify({
+        customer_name: elements.bookingNameInput.value.trim(),
+        customer_email: elements.bookingEmailInput.value.trim(),
+        booking_date: elements.bookingDateInput.value,
+        table_id: state.selectedBookingTable.id,
+      }),
+    });
+
+    elements.bookingMessage.classList.add("success-message");
+    elements.bookingMessage.textContent = `Reservation ${reservation.status}. Admin can now confirm it.`;
+    await loadDashboard();
+  } catch (error) {
+    elements.bookingMessage.textContent = error.message;
+  } finally {
+    submitButton.disabled = false;
+    submitButton.textContent = "Create Pending Reservation";
   }
 }
 
@@ -445,11 +557,15 @@ async function loadDashboard() {
 }
 
 elements.loginForm.addEventListener("submit", handleLogin);
+elements.bookingForm.addEventListener("submit", handleBookingSubmit);
 elements.logoutButton.addEventListener("click", showLogin);
 elements.refreshButton.addEventListener("click", loadDashboard);
 
 for (const item of elements.navItems) {
   item.addEventListener("click", () => setView(item.dataset.view));
 }
+
+elements.bookingDateInput.value = formatDateInput();
+elements.bookingDateInput.min = formatDateInput();
 
 restoreSession();

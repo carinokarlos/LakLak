@@ -7,6 +7,9 @@
 - Express server with local test routes
 - Local dev login route for staff/admin testing
 - Admin dashboard view with analytics and reservation table
+- Reservation creation from the user view
+- Admin confirm/cancel reservation actions
+- QR hash placeholder generated on confirmation
 - User role set: super_admin, developer, staff_admin, club_admin, user
 - User view with club and table browsing
 - XAMPP MariaDB/MySQL schema in `database.sql`
@@ -57,6 +60,9 @@ API checks:
 - `http://127.0.0.1:8000/admin/analytics`
 - `http://127.0.0.1:8000/admin/reservations`
 - `http://127.0.0.1:8000/admin/users`
+- `POST http://127.0.0.1:8000/reservations`
+- `PATCH http://127.0.0.1:8000/admin/reservations/:id/confirm`
+- `PATCH http://127.0.0.1:8000/admin/reservations/:id/cancel`
 - `http://127.0.0.1:8000/health`
 - `http://127.0.0.1:8000/db/health`
 - `http://127.0.0.1:8000/clubs`

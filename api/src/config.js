@@ -12,6 +12,7 @@ export const config = {
   appName: process.env.APP_NAME || "Laklak Nightclub Booking API",
   appEnv: process.env.APP_ENV || "local",
   port: Number(process.env.PORT || 8000),
+  qrHmacSecret: process.env.QR_HMAC_SECRET || "local-dev-qr-secret",
   db: {
     host: process.env.DB_HOST || "127.0.0.1",
     port: Number(process.env.DB_PORT || 3306),

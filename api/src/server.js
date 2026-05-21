@@ -1,4 +1,5 @@
 import cors from "cors";
+import crypto from "node:crypto";
 import express from "express";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -20,6 +21,14 @@ const ROLE_LABELS = {
   user: "User",
 };
 
+function createQrHash(reservationId) {
+  return crypto.createHmac("sha256", config.qrHmacSecret).update(reservationId).digest("hex");
+}
+
+function isBookingDate(value) {
+  return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.resolve(__dirname, "../public")));
@@ -34,7 +43,10 @@ app.get("/api", (_req, res) => {
       databaseHealth: "/db/health",
       adminAnalytics: "/admin/analytics",
       adminReservations: "/admin/reservations",
+      adminReservationConfirm: "/admin/reservations/:id/confirm",
+      adminReservationCancel: "/admin/reservations/:id/cancel",
       adminUsers: "/admin/users",
+      reservations: "/reservations",
       clubs: "/clubs",
       clubTables: "/clubs/:clubId/tables",
     },
@@ -184,6 +196,7 @@ app.get("/admin/reservations", async (_req, res, next) => {
         reservations.id,
         reservations.booking_date,
         reservations.status,
+        reservations.qr_code_hash,
         reservations.expires_at,
         reservations.created_at,
         users.name AS customer_name,
@@ -201,6 +214,200 @@ app.get("/admin/reservations", async (_req, res, next) => {
     res.json(reservations);
   } catch (error) {
     next(error);
+  }
+});
+
+app.patch("/admin/reservations/:id/confirm", async (req, res, next) => {
+  const connection = await pool.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    const [[reservation]] = await connection.query(
+      `SELECT id, status
+       FROM reservations
+       WHERE id = ?
+       FOR UPDATE`,
+      [req.params.id]
+    );
+
+    if (!reservation) {
+      await connection.rollback();
+      res.status(404).json({ error: "Reservation not found" });
+      return;
+    }
+
+    if (reservation.status !== "pending") {
+      await connection.rollback();
+      res.status(409).json({ error: "Only pending reservations can be confirmed" });
+      return;
+    }
+
+    const qrCodeHash = createQrHash(reservation.id);
+
+    await connection.query(
+      `UPDATE reservations
+       SET status = 'confirmed', qr_code_hash = ?, expires_at = NULL
+       WHERE id = ?`,
+      [qrCodeHash, reservation.id]
+    );
+
+    await connection.commit();
+    res.json({ id: reservation.id, status: "confirmed", qr_code_hash: qrCodeHash });
+  } catch (error) {
+    await connection.rollback();
+    next(error);
+  } finally {
+    connection.release();
+  }
+});
+
+app.patch("/admin/reservations/:id/cancel", async (req, res, next) => {
+  const connection = await pool.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    const [[reservation]] = await connection.query(
+      `SELECT id, status
+       FROM reservations
+       WHERE id = ?
+       FOR UPDATE`,
+      [req.params.id]
+    );
+
+    if (!reservation) {
+      await connection.rollback();
+      res.status(404).json({ error: "Reservation not found" });
+      return;
+    }
+
+    if (reservation.status === "attended") {
+      await connection.rollback();
+      res.status(409).json({ error: "Attended reservations cannot be cancelled" });
+      return;
+    }
+
+    if (reservation.status === "cancelled") {
+      await connection.rollback();
+      res.status(409).json({ error: "Reservation is already cancelled" });
+      return;
+    }
+
+    await connection.query(
+      `UPDATE reservations
+       SET status = 'cancelled', expires_at = NULL
+       WHERE id = ?`,
+      [reservation.id]
+    );
+
+    await connection.commit();
+    res.json({ id: reservation.id, status: "cancelled" });
+  } catch (error) {
+    await connection.rollback();
+    next(error);
+  } finally {
+    connection.release();
+  }
+});
+
+app.post("/reservations", async (req, res, next) => {
+  const customerName = String(req.body?.customer_name || "").trim();
+  const customerEmail = String(req.body?.customer_email || "").trim().toLowerCase();
+  const tableId = String(req.body?.table_id || "").trim();
+  const bookingDate = String(req.body?.booking_date || "").trim();
+
+  if (!customerName || !customerEmail || !tableId || !isBookingDate(bookingDate)) {
+    res.status(400).json({
+      error: "customer_name, customer_email, table_id, and booking_date are required",
+    });
+    return;
+  }
+
+  const connection = await pool.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    const [[table]] = await connection.query(
+      `SELECT id, min_consumable, is_active
+       FROM tables
+       WHERE id = ?
+       FOR UPDATE`,
+      [tableId]
+    );
+
+    if (!table || !table.is_active) {
+      await connection.rollback();
+      res.status(404).json({ error: "Table is not available" });
+      return;
+    }
+
+    const [[activeBooking]] = await connection.query(
+      `SELECT id
+       FROM reservations
+       WHERE table_id = ?
+         AND booking_date = ?
+         AND status IN ('pending', 'confirmed', 'attended')
+       LIMIT 1
+       FOR UPDATE`,
+      [tableId, bookingDate]
+    );
+
+    if (activeBooking) {
+      await connection.rollback();
+      res.status(409).json({ error: "That table is already reserved for this date" });
+      return;
+    }
+
+    let userId;
+    const [[existingUser]] = await connection.query(
+      `SELECT id
+       FROM users
+       WHERE LOWER(email) = ?
+       LIMIT 1`,
+      [customerEmail]
+    );
+
+    if (existingUser) {
+      userId = existingUser.id;
+    } else {
+      userId = crypto.randomUUID();
+      await connection.query(
+        `INSERT INTO users (id, firebase_uid, name, email, role)
+         VALUES (?, ?, ?, ?, 'user')`,
+        [userId, `local-${userId}`, customerName, customerEmail]
+      );
+    }
+
+    const reservationId = crypto.randomUUID();
+
+    await connection.query(
+      `INSERT INTO reservations (id, user_id, table_id, booking_date, status, expires_at)
+       VALUES (?, ?, ?, ?, 'pending', DATE_ADD(NOW(), INTERVAL 10 MINUTE))`,
+      [reservationId, userId, tableId, bookingDate]
+    );
+
+    await connection.query(
+      `INSERT INTO payments (id, reservation_id, amount, status)
+       VALUES (?, ?, ?, 'unpaid')`,
+      [crypto.randomUUID(), reservationId, table.min_consumable]
+    );
+
+    await connection.commit();
+
+    res.status(201).json({
+      id: reservationId,
+      user_id: userId,
+      table_id: tableId,
+      booking_date: bookingDate,
+      status: "pending",
+    });
+  } catch (error) {
+    await connection.rollback();
+    next(error);
+  } finally {
+    connection.release();
   }
 });
 

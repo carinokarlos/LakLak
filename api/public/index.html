@@ -175,7 +175,7 @@
             <div class="panel-header">
               <div>
                 <h2 id="reservationsHeading">Latest Reservations</h2>
-                <p>Booking rows will appear here once reservation flow is added.</p>
+                <p>Newest reservation requests and confirmations.</p>
               </div>
             </div>
 
@@ -188,11 +188,13 @@
                     <th>Table</th>
                     <th>Date</th>
                     <th>Status</th>
+                    <th>QR Hash</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody id="reservationsBody">
                   <tr>
-                    <td colspan="5">No reservations yet.</td>
+                    <td colspan="7">No reservations yet.</td>
                   </tr>
                 </tbody>
               </table>
@@ -227,6 +229,35 @@
                 <div class="empty-state">Select a club first.</div>
               </div>
             </section>
+          </section>
+
+          <section class="panel booking-panel" aria-labelledby="bookingHeading">
+            <div class="panel-header">
+              <div>
+                <h2 id="bookingHeading">Create Reservation</h2>
+                <p id="selectedBookingTable">No table selected.</p>
+              </div>
+            </div>
+
+            <form id="bookingForm" class="booking-form">
+              <label class="field">
+                <span>Name</span>
+                <input id="bookingNameInput" name="customer_name" type="text" value="Juan Dela Cruz" autocomplete="name" required />
+              </label>
+
+              <label class="field">
+                <span>Email</span>
+                <input id="bookingEmailInput" name="customer_email" type="email" value="guest@laklak.local" autocomplete="email" required />
+              </label>
+
+              <label class="field">
+                <span>Date</span>
+                <input id="bookingDateInput" name="booking_date" type="date" required />
+              </label>
+
+              <button class="button" type="submit">Create Pending Reservation</button>
+              <p id="bookingMessage" class="form-message" role="status"></p>
+            </form>
           </section>
         </section>
       </main>
