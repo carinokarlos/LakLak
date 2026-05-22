@@ -1,6 +1,7 @@
 import cors from "cors";
 import crypto from "node:crypto";
 import express from "express";
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -10,6 +11,9 @@ import { pingDatabase, pool } from "./db.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const app = express();
+const clientDistPath = path.resolve(__dirname, "../../client/dist");
+const clientIndexPath = path.join(clientDistPath, "index.html");
+const hasClientBuild = fs.existsSync(clientIndexPath);
 
 const USER_ROLES = ["super_admin", "developer", "staff_admin", "club_admin", "user"];
 const DASHBOARD_ROLES = ["super_admin", "developer", "staff_admin", "club_admin"];
@@ -20,6 +24,16 @@ const ROLE_LABELS = {
   club_admin: "Club Admin",
   user: "User",
 };
+const API_ROUTE_PREFIXES = [
+  "/api",
+  "/auth",
+  "/health",
+  "/db",
+  "/admin",
+  "/reservations",
+  "/clubs",
+  "/checkin",
+];
 
 function createQrHash(reservationId) {
   return crypto.createHmac("sha256", config.qrHmacSecret).update(reservationId).digest("hex");
@@ -31,7 +45,10 @@ function isBookingDate(value) {
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.resolve(__dirname, "../public")));
+
+if (hasClientBuild) {
+  app.use(express.static(clientDistPath));
+}
 
 app.get("/api", (_req, res) => {
   res.json({
@@ -47,6 +64,7 @@ app.get("/api", (_req, res) => {
       adminReservationCancel: "/admin/reservations/:id/cancel",
       adminUsers: "/admin/users",
       reservations: "/reservations",
+      checkin: "/checkin",
       clubs: "/clubs",
       clubTables: "/clubs/:clubId/tables",
     },
@@ -65,6 +83,12 @@ app.get("/db/health", async (_req, res, next) => {
   } catch (error) {
     next(error);
   }
+});
+
+app.get("/auth/dev-login", (_req, res) => {
+  res.status(405).json({
+    error: "Use POST /auth/dev-login with a JSON body like {\"email\":\"admin@laklak.local\"}",
+  });
 });
 
 app.post("/auth/dev-login", async (req, res, next) => {
@@ -311,6 +335,66 @@ app.patch("/admin/reservations/:id/cancel", async (req, res, next) => {
   }
 });
 
+app.post("/checkin", async (req, res, next) => {
+  const qrCodeHash = String(req.body?.qr_code_hash || "").trim();
+
+  if (!qrCodeHash) {
+    res.status(400).json({ error: "qr_code_hash is required" });
+    return;
+  }
+
+  const connection = await pool.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    const [[reservation]] = await connection.query(
+      `SELECT
+        reservations.id,
+        reservations.status,
+        reservations.booking_date,
+        users.name AS customer_name,
+        tables.label AS table_label,
+        clubs.name AS club_name
+      FROM reservations
+      INNER JOIN users ON users.id = reservations.user_id
+      INNER JOIN tables ON tables.id = reservations.table_id
+      INNER JOIN clubs ON clubs.id = tables.club_id
+      WHERE reservations.qr_code_hash = ?
+      LIMIT 1
+      FOR UPDATE`,
+      [qrCodeHash]
+    );
+
+    if (!reservation) {
+      await connection.rollback();
+      res.status(404).json({ error: "Ticket hash was not found" });
+      return;
+    }
+
+    if (reservation.status !== "confirmed") {
+      await connection.rollback();
+      res.status(409).json({ error: `Reservation is ${reservation.status}, not confirmed` });
+      return;
+    }
+
+    await connection.query(
+      `UPDATE reservations
+       SET status = 'attended', expires_at = NULL
+       WHERE id = ?`,
+      [reservation.id]
+    );
+
+    await connection.commit();
+    res.json({ ...reservation, status: "attended" });
+  } catch (error) {
+    await connection.rollback();
+    next(error);
+  } finally {
+    connection.release();
+  }
+});
+
 app.post("/reservations", async (req, res, next) => {
   const customerName = String(req.body?.customer_name || "").trim();
   const customerEmail = String(req.body?.customer_email || "").trim().toLowerCase();
@@ -440,6 +524,29 @@ app.get("/clubs/:clubId/tables", async (req, res, next) => {
     next(error);
   }
 });
+
+if (hasClientBuild) {
+  app.get("*", (req, res, next) => {
+    const isApiPath = API_ROUTE_PREFIXES.some(
+      (prefix) => req.path === prefix || req.path.startsWith(`${prefix}/`)
+    );
+
+    if (isApiPath || !req.accepts("html")) {
+      next();
+      return;
+    }
+
+    res.sendFile(clientIndexPath);
+  });
+} else {
+  app.get("/", (_req, res) => {
+    res.json({
+      name: config.appName,
+      message: "React client build not found. Run npm.cmd run build in client, or use npm.cmd run dev from client for Vite.",
+      clientDevUrl: "http://127.0.0.1:5173",
+    });
+  });
+}
 
 app.use((_req, res) => {
   res.status(404).json({ error: "Not found" });

@@ -1,29 +1,25 @@
-# Phase 1 - Database & Node API
+# Phase 1 - Local MVP
 
-## Completed Scope
+Phase 1 establishes the local booking loop for Laklak:
 
-- Node.js API project structure under `/api`
-- Browser UI served from `/api/public`
-- Express server with local test routes
-- Local dev login route for staff/admin testing
-- Admin dashboard view with analytics and reservation table
-- Reservation creation from the user view
-- Admin confirm/cancel reservation actions
-- QR hash placeholder generated on confirmation
-- User role set: super_admin, developer, staff_admin, club_admin, user
-- User view with club and table browsing
+- Node.js API project under `/api`
+- React operations UI under `/client`
 - XAMPP MariaDB/MySQL schema in `database.sql`
 - Seed data in `seed.sql`
-- Tables for users, clubs, tables, reservations, and payments
-- Foreign keys and indexes for the MVP booking flow
+- Local email-only dashboard login
+- Admin analytics, users, clubs, tables, and reservations
+- User-style reservation creation
+- Admin reservation confirmation and cancellation
+- Manual check-in from confirmed QR hashes
 
-## XAMPP Database
+For full setup and run instructions, use the root `README.md`.
 
-Create this database in phpMyAdmin:
+## Local Database
 
-```sql
-CREATE DATABASE nightclub_booking CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-```
+Create or import the `nightclub_booking` database through phpMyAdmin, then import:
+
+1. `database.sql`
+2. `seed.sql`
 
 Default local connection:
 
@@ -35,46 +31,21 @@ DB_USER=root
 DB_PASSWORD=
 ```
 
-## Verify In phpMyAdmin
+## Main Local URLs
 
-After importing `database.sql` and `seed.sql`:
+- React app served by API: `http://127.0.0.1:8000`
+- Vite dev server: `http://127.0.0.1:5173`
+- API route index: `http://127.0.0.1:8000/api`
+- API health: `http://127.0.0.1:8000/health`
+- Database health: `http://127.0.0.1:8000/db/health`
 
-- `users` has role test accounts
-- `clubs` has 2 clubs
-- `tables` has 10 tables
-- `reservations` and `payments` are empty
+## Test Login
 
-## Run API
-
-```powershell
-cd C:\xampp\htdocs\Projects\laklak\api
-npm.cmd install
-npm.cmd run dev
+```txt
+admin@laklak.local
+developer@laklak.local
+staffadmin@laklak.local
+clubadmin@laklak.local
 ```
 
-Open `http://127.0.0.1:8000` to see the dashboard UI.
-
-API checks:
-
-- `http://127.0.0.1:8000/api`
-- `http://127.0.0.1:8000/admin/analytics`
-- `http://127.0.0.1:8000/admin/reservations`
-- `http://127.0.0.1:8000/admin/users`
-- `POST http://127.0.0.1:8000/reservations`
-- `PATCH http://127.0.0.1:8000/admin/reservations/:id/confirm`
-- `PATCH http://127.0.0.1:8000/admin/reservations/:id/cancel`
-- `http://127.0.0.1:8000/health`
-- `http://127.0.0.1:8000/db/health`
-- `http://127.0.0.1:8000/clubs`
-
-Local dashboard login:
-
-- Email: `admin@laklak.local`
-- Password: not used in Phase 1 because Firebase Auth is planned for Phase 2
-
-Additional role test emails:
-
-- `developer@laklak.local`
-- `staffadmin@laklak.local`
-- `clubadmin@laklak.local`
-- `user@laklak.local`
+Passwords are not used in Phase 1.
