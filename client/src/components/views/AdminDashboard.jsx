@@ -63,8 +63,8 @@ const AdminDashboard = ({
             systemStatus?.api === "OK"
               ? "ok"
               : systemStatus?.api === "Checking"
-              ? "default"
-              : "danger"
+                ? "default"
+                : "danger"
           }
         />
         <StatTile
@@ -74,8 +74,8 @@ const AdminDashboard = ({
             systemStatus?.db === "connected"
               ? "ok"
               : systemStatus?.db === "Checking"
-              ? "default"
-              : "danger"
+                ? "default"
+                : "danger"
           }
         />
         <StatTile label="Clubs" value={analytics?.clubs || 0} />
