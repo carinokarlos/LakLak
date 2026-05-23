@@ -1,7 +1,7 @@
-# File Tree: laklak
+# File Tree: LakLak
 
-**Generated:** 5/23/2026, 12:05:56 PM
-**Root Path:** `c:\xampp\htdocs\Projects\laklak`
+**Generated:** 5/23/2026, 10:23:38 PM
+**Root Path:** `c:\xampp\htdocs\LakLak`
 
 ```
 ├── api
@@ -31,6 +31,7 @@
 │   │   │   └── views
 │   │   │       ├── AdminDashboard.jsx
 │   │   │       ├── Checkin.jsx
+│   │   │       ├── Landing.jsx
 │   │   │       ├── Login.jsx
 │   │   │       └── UserView.jsx
 │   │   ├── utils
@@ -45,10 +46,33 @@
 │   └── vite.config.js
 ├── migrations
 │   └── 20260521_add_user_roles.sql
+├── mobile
+│   ├── .claude
+│   │   └── settings.json
+│   ├── assets
+│   │   ├── adaptive-icon.png
+│   │   ├── favicon.png
+│   │   ├── icon.png
+│   │   └── splash-icon.png
+│   ├── constants
+│   │   └── theme.ts
+│   ├── utils
+│   │   └── api.ts
+│   ├── .gitignore
+│   ├── AGENTS.md
+│   ├── App.tsx
+│   ├── CLAUDE.md
+│   ├── app.json
+│   ├── index.ts
+│   ├── package-lock.json
+│   ├── package.json
+│   └── tsconfig.json
 ├── .gitattributes
 ├── .gitignore
+├── FileTree.md
 ├── README.md
 ├── database.sql
+├── package-lock.json
 └── seed.sql
 ```
 
