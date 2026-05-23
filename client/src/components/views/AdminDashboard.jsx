@@ -1,12 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
 import { StatTile } from "../ui/StatTile";
 import { EmptyState } from "../ui/EmptyState";
-import { Brand } from "../ui/Brand";
 
 const AdminDashboard = ({
-  currentUser,
-  loadDashboard,
-  isRefreshing,
   dashboardLoaded,
   loadError,
   systemStatus,
@@ -19,38 +14,12 @@ const AdminDashboard = ({
   selectedAdminClub,
   adminTables,
   tableError,
-  selectedUserClubId,
-  setSelectedUserClubId,
-  selectedUserClub,
-  userTables,
-  userTableError,
-  bookingForm,
-  setBookingForm,
-  selectedBookingTable,
-  setSelectedBookingTable,
-  bookingMessage,
-  setBookingMessage,
-  isBooking,
-  handleBookingSubmit,
-  checkinHash,
-  setCheckinHash,
-  checkinMessage,
-  setCheckinMessage,
-  isCheckingIn,
-  handleCheckin,
   formatDate,
   formatCurrency,
   truncateHash,
   handleReservationAction,
   activeReservationAction
 }) => {
-  const pageCopy = {
-    admin: {
-      title: "Admin Dashboard",
-      subtitle: "Live local operations data from XAMPP and the Node API.",
-    },
-  }["admin"];
-
   return (
     <section className="view-panel">
       {loadError && <EmptyState tone="error">{loadError}</EmptyState>}

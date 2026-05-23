@@ -1,17 +1,46 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Sidebar from "./components/layout/Sidebar";
 import Topbar from "./components/layout/Topbar";
+import Landing from "./components/views/Landing";
 import Login from "./components/views/Login";
 import AdminDashboard from "./components/views/AdminDashboard";
 import UserView from "./components/views/UserView";
 import Checkin from "./components/views/Checkin";
-import { Brand } from "./components/ui/Brand";
-import { StatTile } from "./components/ui/StatTile";
 import { EmptyState } from "./components/ui/EmptyState";
-import { formatRole, formatCurrency, formatDate, formatDateInput, truncateHash, classNames } from "./utils/helpers";
+import { formatRole, formatCurrency, formatDate, formatDateInput, truncateHash } from "./utils/helpers";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
 const SESSION_KEY = "laklak.currentUser";
+const ROUTES = {
+  landing: "/",
+  login: "/login",
+  admin: "/app/admin",
+  user: "/app/user",
+  checkin: "/app/checkin",
+};
+const ROUTE_VIEWS = {
+  [ROUTES.admin]: "admin",
+  [ROUTES.user]: "user",
+  [ROUTES.checkin]: "checkin",
+};
+const VIEW_ROUTES = {
+  admin: ROUTES.admin,
+  user: ROUTES.user,
+  checkin: ROUTES.checkin,
+};
+const PRIVATE_ROUTES = new Set([ROUTES.admin, ROUTES.user, ROUTES.checkin]);
+const ADMIN_ROLES = new Set(["admin", "super_admin", "developer", "staff_admin", "club_admin"]);
+
+function normalizePath(path) {
+  return path.replace(/\/+$/, "") || ROUTES.landing;
+}
+
+function getRouteForRole(user) {
+  if (!user) return ROUTES.login;
+  if (ADMIN_ROLES.has(user.role)) return ROUTES.admin;
+  if (user.role === "user") return ROUTES.user;
+  return ROUTES.login;
+}
 
 function App() {
   const [currentUser, setCurrentUser] = useState(() => {
@@ -24,7 +53,7 @@ function App() {
       return null;
     }
   });
-  const [currentView, setCurrentView] = useState("admin");
+  const [routePath, setRoutePath] = useState(() => normalizePath(window.location.pathname));
   const [loginEmail, setLoginEmail] = useState("admin@laklak.local");
   const [loginError, setLoginError] = useState("");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -67,6 +96,18 @@ function App() {
     () => clubs.find((club) => club.id === selectedUserClubId),
     [clubs, selectedUserClubId]
   );
+  const currentView = ROUTE_VIEWS[routePath] || "admin";
+
+  const navigate = useCallback((path, options = {}) => {
+    const nextPath = normalizePath(path);
+    const historyMethod = options.replace ? "replaceState" : "pushState";
+
+    if (window.location.pathname !== nextPath) {
+      window.history[historyMethod]({}, "", nextPath);
+    }
+
+    setRoutePath(nextPath);
+  }, []);
 
   const fetchJson = useCallback(async (path, options = {}) => {
     const response = await fetch(`${API_BASE}${path}`, {
@@ -85,6 +126,33 @@ function App() {
 
     return body;
   }, []);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setRoutePath(normalizePath(window.location.pathname));
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  useEffect(() => {
+    let nextPath = null;
+
+    if (!currentUser && PRIVATE_ROUTES.has(routePath)) {
+      nextPath = ROUTES.login;
+    } else if (currentUser && routePath === ROUTES.login) {
+      nextPath = getRouteForRole(currentUser);
+    } else if (currentUser && routePath === ROUTES.admin && !ADMIN_ROLES.has(currentUser.role)) {
+      nextPath = getRouteForRole(currentUser);
+    }
+
+    if (nextPath) {
+      window.queueMicrotask(() => {
+        navigate(nextPath, { replace: true });
+      });
+    }
+  }, [currentUser, navigate, routePath]);
 
   const loadDashboard = useCallback(async () => {
     setIsRefreshing(true);
@@ -209,6 +277,7 @@ function App() {
 
       localStorage.setItem(SESSION_KEY, JSON.stringify(user));
       setCurrentUser(user);
+      navigate(getRouteForRole(user), { replace: true });
     } catch (error) {
       setLoginError(error.message);
     } finally {
@@ -224,6 +293,7 @@ function App() {
     setSelectedBookingTable(null);
     setBookingMessage({ text: "", type: "" });
     setCheckinMessage({ text: "", type: "" });
+    navigate(ROUTES.landing, { replace: true });
   }
 
   async function handleReservationAction(reservationId, action) {
@@ -302,38 +372,25 @@ function App() {
     }
   }
 
-  if (!currentUser) {
+  if (routePath === ROUTES.landing) {
     return (
-      <section className="login-screen">
-        <form className="login-panel" onSubmit={handleLogin}>
-          <div className="login-brand">
-            <Brand />
-          </div>
+      <Landing
+        currentUser={currentUser}
+        onNavigate={navigate}
+        getRouteForRole={getRouteForRole}
+      />
+    );
+  }
 
-          <div>
-            <h1>Sign In</h1>
-            <p className="login-copy">Use your local admin account.</p>
-          </div>
-
-          <label className="field">
-            <span>Email</span>
-            <input
-              type="email"
-              value={loginEmail}
-              autoComplete="email"
-              onChange={(e) => setLoginEmail(e.target.value)}
-              required
-            />
-          </label>
-
-          <button className="button" type="submit" disabled={isLoggingIn}>
-            {isLoggingIn ? "Signing in" : "Continue"}
-          </button>
-          <p className="form-message error" role="status">
-            {loginError}
-          </p>
-        </form>
-      </section>
+  if (!currentUser || routePath === ROUTES.login) {
+    return (
+      <Login
+        onLogin={handleLogin}
+        loginEmail={loginEmail}
+        setLoginEmail={setLoginEmail}
+        loginError={loginError}
+        isLoggingIn={isLoggingIn}
+      />
     );
   }
 
@@ -357,7 +414,7 @@ function App() {
       <Sidebar
         currentUser={currentUser}
         currentView={currentView}
-        onViewChange={setCurrentView}
+        onViewChange={(view) => navigate(VIEW_ROUTES[view] || ROUTES.admin)}
       />
 
       <main className="workspace">
@@ -389,25 +446,6 @@ function App() {
             selectedAdminClub={selectedAdminClub}
             adminTables={adminTables}
             tableError={tableError}
-            selectedUserClubId={selectedUserClubId}
-            setSelectedUserClubId={setSelectedUserClubId}
-            selectedUserClub={selectedUserClub}
-            userTables={userTables}
-            userTableError={userTableError}
-            bookingForm={bookingForm}
-            setBookingForm={setBookingForm}
-            selectedBookingTable={selectedBookingTable}
-            setSelectedBookingTable={setSelectedBookingTable}
-            bookingMessage={bookingMessage}
-            setBookingMessage={setBookingMessage}
-            isBooking={isBooking}
-            handleBookingSubmit={handleBookingSubmit}
-            checkinHash={checkinHash}
-            setCheckinHash={setCheckinHash}
-            checkinMessage={checkinMessage}
-            setCheckinMessage={setCheckinMessage}
-            isCheckingIn={isCheckingIn}
-            handleCheckin={handleCheckin}
             formatDate={formatDate}
             formatCurrency={formatCurrency}
             truncateHash={truncateHash}

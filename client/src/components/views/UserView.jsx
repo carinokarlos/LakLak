@@ -1,17 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
 import { EmptyState } from "../ui/EmptyState";
-import { formatDate, formatCurrency, formatDateInput } from "../../utils/helpers";
-
-// Since we don't have utils yet, we'll define helper functions here or import from a utils file.
-// For now, let's copy the helper functions from the original App.jsx that are needed.
-// Alternatively, we can pass them as props. But to keep the split clean, let's create a utils file.
-// However, due to the scope, I'll define them in the component for now and then we can move them later.
 
 const UserView = ({
-  currentUser,
-  loadDashboard,
-  isRefreshing,
-  dashboardLoaded,
   loadError,
   clubs,
   setSelectedUserClubId,
@@ -29,40 +18,12 @@ const UserView = ({
   handleBookingSubmit,
   formatDateInput
 }) => {
-  const pageCopy = {
-    user: {
-      title: "User View",
-      subtitle: "Customer-facing club and table browsing.",
-    },
-  }["user"];
-
-  // Helper functions (copied from original App.jsx)
-  const formatRole = (role, roleLabel) => {
-    const ROLE_LABELS = {
-      super_admin: "Superadmin",
-      developer: "Developer",
-      staff_admin: "Staff Admin",
-      club_admin: "Club Admin",
-      user: "User",
-    };
-    return roleLabel || ROLE_LABELS[role] || role;
-  };
-
   const formatCurrency = (value) => {
     return new Intl.NumberFormat("en-PH", {
       style: "currency",
       currency: "PHP",
       maximumFractionDigits: 0,
     }).format(Number(value || 0));
-  };
-
-  const formatDate = (value) => {
-    if (!value) return "-";
-    return new Intl.DateTimeFormat("en-PH", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    }).format(new Date(value));
   };
 
   return (

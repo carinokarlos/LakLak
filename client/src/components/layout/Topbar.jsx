@@ -43,10 +43,10 @@ const Topbar = ({
           title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
           aria-label="Toggle theme"
         >
-          {theme === "dark" ? "☀ Light" : "☾ Dark"}
+          {theme === "dark" ? "Light" : "Dark"}
         </button>
         <button className="button" type="button" onClick={loadDashboard}>
-          {isRefreshing ? "Refreshing…" : "Refresh"}
+          {isRefreshing ? "Refreshing..." : "Refresh"}
         </button>
         <button className="button button-secondary" type="button" onClick={handleLogout}>
           Logout

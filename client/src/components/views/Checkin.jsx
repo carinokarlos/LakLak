@@ -1,27 +1,13 @@
-import { useState } from "react";
 import { EmptyState } from "../ui/EmptyState";
 
 const Checkin = ({
-  currentUser,
-  loadDashboard,
-  isRefreshing,
-  dashboardLoaded,
   loadError,
   checkinHash,
   setCheckinHash,
   checkinMessage,
-  setCheckinMessage,
   isCheckingIn,
-  handleCheckin,
-  formatDate
+  handleCheckin
 }) => {
-  const pageCopy = {
-    checkin: {
-      title: "Door Check-in",
-      subtitle: "Validate confirmed QR hashes at the entrance.",
-    },
-  }["checkin"];
-
   return (
     <section className="view-panel">
       {loadError && <EmptyState tone="error">{loadError}</EmptyState>}

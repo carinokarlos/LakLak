@@ -1,15 +1,9 @@
-import { useState } from "react";
 import { Brand } from "../ui/Brand";
 
 const Login = ({ onLogin, loginEmail, setLoginEmail, loginError, isLoggingIn }) => {
-  const handleLogin = (event) => {
-    event.preventDefault();
-    onLogin(loginEmail.trim());
-  };
-
   return (
     <section className="login-screen">
-      <form className="login-panel" onSubmit={handleLogin}>
+      <form className="login-panel" onSubmit={onLogin}>
         <div className="login-brand">
           <Brand />
         </div>
