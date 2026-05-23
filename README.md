@@ -271,3 +271,103 @@ For live frontend changes, use Vite at `http://127.0.0.1:5173`.
 - `node_modules` is ignored by git.
 - Keep shared run instructions in this root README.
 - Use `npm.cmd` instead of `npm` in PowerShell if script execution is blocked.
+
+---
+
+## Changelog
+
+### Phase 1.1 — Bug Fixes and Deep Violet Theme
+
+#### Bug Fixes
+
+**Login form caused white screen and `/?` URL on submit.**
+
+The `handleLogin` function in `client/src/App.jsx` was missing
+`event.preventDefault()`. The browser performed a full HTML form
+submission on every login attempt, which caused a page reload and wiped
+the React app state. Fixed by accepting the submit event and calling
+`event.preventDefault()` before running the login logic.
+
+**Dashboard showed a white screen for all roles after login.**
+
+Three sub-view components contained broken and redundant React hooks
+that were left over from an incomplete refactor:
+
+- `AdminDashboard.jsx` had duplicate `useCallback` and `useEffect` hooks
+  that referenced state setters (`setAdminTables`, `setTableError`, etc.)
+  which were not defined inside the component or passed as props.
+- `UserView.jsx` had the same issue plus a no-op `setInterval` polling
+  loop and a commented-out `setUserTables` call inside a `useEffect`.
+- `Checkin.jsx` had an unused `fetchJson` function that called
+  `useCallback` without importing it from React.
+
+All three caused `ReferenceError` crashes on mount, which React caught
+and rendered as a blank white screen. All redundant hooks were removed.
+Data fetching remains in `App.jsx` and is passed down as props.
+
+**Named component exports were missing.**
+
+`Brand.jsx`, `StatTile.jsx`, and `EmptyState.jsx` all used default
+exports (`export default Component`), but every import site used named
+import syntax (`import { Component } from "..."`). This caused Vite to
+throw `MISSING_EXPORT` errors during the production build. Fixed by
+adding named exports (`export const Component = ...`) alongside the
+existing default exports in all three files.
+
+**API and Database status tiles always showed "Checking".**
+
+The `AdminDashboard` component rendered hardcoded `value="Checking"`
+strings on the API and Database stat tiles. The actual health data was
+fetched correctly in `App.jsx` into the `systemStatus` state, but was
+never passed as a prop to `AdminDashboard`. Fixed by:
+
+1. Passing `systemStatus={systemStatus}` from `App.jsx`.
+2. Destructuring `systemStatus` in `AdminDashboard`.
+3. Rendering `systemStatus.api` and `systemStatus.db` dynamically with
+   tone logic: green for `OK`/`connected`, grey for `Checking`, red for
+   any other value.
+
+**`.env` files were missing on first run.**
+
+Neither the root `.env` nor `api/.env` existed. Both were created by
+copying from their respective `.env.example` files using default
+settings (blank DB password, port 8000).
+
+#### Theme — Deep Violet
+
+`client/src/index.css` was fully rewritten with a Deep Violet token
+system. Dark mode is the default. Light mode is toggled at runtime via a
+`data-theme="light"` attribute on the root `<html>` element.
+
+Token system:
+
+| Token | Dark mode | Light mode |
+| --- | --- | --- |
+| `--bg` | `#0d0618` | `#f5f4fe` |
+| `--surface` | `#1a1240` | `#eeedfe` |
+| `--surface-raised` | `#26215c` | `#cecbf6` |
+| `--border` | `#3c3489` | `#afa9ec` |
+| `--accent` | `#534ab7` | `#534ab7` |
+| `--text` | `#eeedfe` | `#26215c` |
+| `--text-secondary` | `#cecbf6` | `#3c3489` |
+| `--muted` | `#afa9ec` | `#7f77dd` |
+| `--cta-bg` | `#534ab7` | `#534ab7` |
+| `--cta-text` | `#eeedfe` | `#eeedfe` |
+
+Other visual changes:
+
+- Violet-tinted glow (`box-shadow`) on interactive elements: buttons,
+  focused inputs, active nav items, and hovered cards.
+- Status badge colours (`pending`, `confirmed`, `attended`, `cancelled`)
+  remapped to the violet ramp. No plain red or green.
+- Panel headers use a subtle top-to-surface gradient.
+- Table rows have violet-tinted hover and selected states.
+- Custom scrollbars styled with the violet palette.
+- Pure black (`#000000`) and pure white (`#ffffff`) are not used
+  anywhere. All values stay within the violet ramp.
+- Inter font (weights 400–800) loaded from Google Fonts via `index.html`.
+
+`client/src/components/layout/Topbar.jsx` was updated to add a
+Light/Dark toggle button. The current theme is persisted to
+`localStorage` under the key `laklak.theme` and reapplied on every page
+load.

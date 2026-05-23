@@ -196,7 +196,8 @@ function App() {
     };
   }, [currentUser, selectedUserClubId, fetchJson, setUserTables, setUserTableError]);
 
-  async function handleLogin() {
+  async function handleLogin(event) {
+    if (event) event.preventDefault();
     setLoginError("");
     setIsLoggingIn(true);
 
@@ -378,6 +379,7 @@ function App() {
             isRefreshing={isRefreshing}
             dashboardLoaded={dashboardLoaded}
             loadError={loadError}
+            systemStatus={systemStatus}
             clubs={clubs}
             analytics={analytics}
             reservations={reservations}

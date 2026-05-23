@@ -9,6 +9,7 @@ const AdminDashboard = ({
   isRefreshing,
   dashboardLoaded,
   loadError,
+  systemStatus,
   clubs,
   analytics,
   reservations,
@@ -50,105 +51,33 @@ const AdminDashboard = ({
     },
   }["admin"];
 
-  const fetchJson = useCallback(async (path, options = {}) => {
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || ""}${path}`, {
-      headers: {
-        "Content-Type": "application/json",
-        ...(options.headers || {}),
-      },
-      ...options,
-    });
-
-    const body = await response.json().catch(() => ({}));
-
-    if (!response.ok) {
-      throw new Error(body.error || `${path} returned ${response.status}`);
-    }
-
-    return body;
-  }, []);
-
-  const loadDashboardCallback = useCallback(() => {
-    loadDashboard();
-  }, [loadDashboard]);
-
-  useEffect(() => {
-    if (!currentUser) return;
-
-    window.queueMicrotask(() => {
-      void loadDashboardCallback();
-    });
-  }, [currentUser, loadDashboardCallback]);
-
-  useEffect(() => {
-    if (!currentUser) return undefined;
-
-    const pollingTimer = window.setInterval(() => {
-      if (true) { // always load in admin view
-        void loadDashboardCallback();
-      }
-    }, 30000);
-
-    return () => window.clearInterval(pollingTimer);
-  }, [currentUser, loadDashboardCallback]);
-
-  useEffect(() => {
-    if (!currentUser || !selectedAdminClubId) {
-      return undefined;
-    }
-
-    let ignore = false;
-    fetchJson(`/clubs/${selectedAdminClubId}/tables`)
-      .then((tables) => {
-        if (!ignore) {
-          setTableError("");
-          setAdminTables(tables);
-        }
-      })
-      .catch((error) => {
-        if (!ignore) {
-          setAdminTables([]);
-          setTableError(error.message);
-        }
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, [currentUser, selectedAdminClubId, fetchJson, setAdminTables, setTableError]);
-
-  useEffect(() => {
-    if (!currentUser || !selectedUserClubId) {
-      return undefined;
-    }
-
-    let ignore = false;
-    fetchJson(`/clubs/${selectedUserClubId}/tables`)
-      .then((tables) => {
-        if (!ignore) {
-          setUserTableError("");
-          setUserTables(tables);
-        }
-      })
-      .catch((error) => {
-        if (!ignore) {
-          setUserTables([]);
-          setUserTableError(error.message);
-        }
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, [currentUser, selectedUserClubId, fetchJson, setUserTables, setUserTableError]);
-
   return (
     <section className="view-panel">
       {loadError && <EmptyState tone="error">{loadError}</EmptyState>}
 
       <section className="status-grid" aria-label="System status">
-        <StatTile label="API" value="Checking" tone={loadError ? "danger" : "ok"} />
-        <StatTile label="Database" value="Checking" tone={loadError ? "danger" : "ok"} />
+        <StatTile
+          label="API"
+          value={systemStatus?.api || "Checking"}
+          tone={
+            systemStatus?.api === "OK"
+              ? "ok"
+              : systemStatus?.api === "Checking"
+              ? "default"
+              : "danger"
+          }
+        />
+        <StatTile
+          label="Database"
+          value={systemStatus?.db || "Checking"}
+          tone={
+            systemStatus?.db === "connected"
+              ? "ok"
+              : systemStatus?.db === "Checking"
+              ? "default"
+              : "danger"
+          }
+        />
         <StatTile label="Clubs" value={analytics?.clubs || 0} />
         <StatTile label="Tables" value={analytics?.tables || 0} />
       </section>
